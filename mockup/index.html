@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Super Hints mockup</title>
+<style>
+:root{
+  /* Only Omarchy's foundational colors.toml tokens. Everything else is derived,
+     like shell/Commons/Color.qml, so every theme works unmodified. */
+  --fg:#dfdfdf; --bg:#000000; --accent:#f8f8f8; --muted:#575757; --ok:#66cb8e;
+
+  --surface:color-mix(in srgb,var(--fg) 3%,var(--bg));
+  --raised:color-mix(in srgb,var(--fg) 8%,var(--bg));
+  --sel:color-mix(in srgb,var(--accent) 22%,var(--bg));
+  --t90:color-mix(in srgb,var(--fg) 92%,transparent); --t70:color-mix(in srgb,var(--fg) 72%,transparent);
+  --t50:color-mix(in srgb,var(--fg) 52%,transparent); --t35:color-mix(in srgb,var(--fg) 38%,transparent);
+  --t20:color-mix(in srgb,var(--fg) 24%,transparent);
+  --b10:color-mix(in srgb,var(--fg) 12%,transparent); --b05:color-mix(in srgb,var(--fg) 6%,transparent);
+  --font:"GeistMono Nerd Font","Geist Mono","JetBrains Mono",ui-monospace,monospace;
+  --barh:28px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--t90);font:12px/1.4 var(--font);overflow:hidden;user-select:none}
+
+/* ── bar ─────────────────────────────────────────── */
+.bar{position:fixed;inset:0 0 auto 0;height:var(--barh);display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:var(--bg);z-index:20}
+.bar .l,.bar .r{display:flex;align-items:center;gap:14px}
+.bar .c{position:absolute;left:50%;transform:translateX(-50%);color:var(--t70)}
+.ws{display:flex;gap:10px;color:var(--t35)}
+.ws span{cursor:pointer}
+.ws span.on{color:var(--t90)} .ws span.occ{color:var(--t50)}
+.r .ico{color:var(--t50)}
+.agents{color:var(--t50)} .agents b{color:var(--ok);font-weight:400}
+
+.kh{display:flex;align-items:center;gap:3px;height:18px;padding:0 6px;border-radius:4px;color:var(--t35);cursor:pointer;transition:color .08s,background .08s}
+.kh:hover{color:var(--t70)}
+.kh.live{color:var(--accent);background:var(--raised)}
+.kh i{font-style:normal;min-width:8px;text-align:center}
+.kh i.m{display:none}
+.kh.live i.m.on{display:inline}
+
+/* ── panel ───────────────────────────────────────── */
+.panel{position:fixed;top:calc(var(--barh) + 6px);right:8px;width:350px;max-height:calc(100vh - var(--barh) - 70px);overflow-y:auto;scrollbar-width:none;
+  background:var(--surface);border:1px solid var(--b10);border-radius:8px;padding:8px 0 6px;z-index:30;
+  opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity 70ms linear,transform 90ms ease-out;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.panel.show{opacity:1;transform:none}
+.panel.pinned{pointer-events:auto}
+.hd{display:flex;align-items:center;gap:8px;padding:0 8px 7px 12px;color:var(--t35);font-size:11px;border-bottom:1px solid var(--b05);margin-bottom:2px}
+.hd .app{color:var(--t70);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.cog{width:20px;height:20px;display:none;align-items:center;justify-content:center;border-radius:4px;color:var(--t35);cursor:pointer}
+.panel.pinned .cog{display:flex}
+.cog:hover{color:var(--t90);background:var(--raised)}
+
+.cat{padding:8px 12px 2px;color:var(--t35);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:10px;min-height:26px;padding:4px 12px;position:relative}
+.row.top{background:linear-gradient(90deg,var(--raised),transparent)}
+.row.top::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--accent)}
+.row.top .k:not(.extra){border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.row.fire{animation:fire .32s ease-out}
+.row.known .lbl{color:var(--t50)}
+@keyframes fire{0%{background:var(--sel)}100%{background:transparent}}
+.keys{display:flex;gap:3px;min-width:78px}
+.k{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:4px;border:1px solid var(--b10);color:var(--t90);font-size:11px;background:var(--bg);white-space:nowrap}
+.k.extra{color:var(--t35);border-style:dashed}
+.k.mouse{font-size:10px;color:var(--t70)}
+.txt{display:flex;flex-direction:column;min-width:0}
+.lbl{color:var(--t70);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.top .lbl{color:var(--t90)}
+.desc{color:var(--t35);font-size:10.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel.d-top .row:not(.top) .desc,.panel.d-off .desc{display:none}
+.why{color:var(--t20);font-size:10px;white-space:nowrap}
+.why.ctx{color:var(--t35)}
+.why.seq{color:var(--ok);opacity:.8}
+.why.known{color:var(--t20);font-style:italic}
+.foot{display:flex;gap:12px;padding:6px 12px 0;margin-top:4px;border-top:1px solid var(--b05);color:var(--t20);font-size:10.5px}
+.foot b{color:var(--t50);font-weight:400}
+.empty{padding:6px 12px;color:var(--t35)}
+
+/* ── config editor ───────────────────────────────── */
+.cfg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 55%,transparent);z-index:50}
+.cfg.show{display:flex}
+.cfg .card{width:min(640px,calc(100vw - 32px));height:min(640px,calc(100vh - 80px));display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--b10);border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.cfg .top{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b05);color:var(--t50);font-size:11px}
+.cfg .top b{color:var(--t90);font-weight:400}
+.cfg .top .sp{flex:1}
+.cfg textarea{flex:1;resize:none;border:0;outline:0;background:transparent;color:var(--t90);font:12px/1.6 var(--font);padding:12px 14px;tab-size:2;user-select:text}
+.cfg .bot{display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--b05);font-size:11px;color:var(--t35)}
+.cfg .bot .st{flex:1} .cfg .st.ok{color:var(--ok)} .cfg .st.err{color:#e67e80}
+.btn{background:none;border:1px solid var(--b10);color:var(--t70);font:inherit;padding:2px 9px;border-radius:5px;cursor:pointer}
+.btn:hover{color:var(--t90);border-color:var(--t20)}
+
+/* ── desktop ─────────────────────────────────────── */
+.desk{position:fixed;top:var(--barh);left:0;right:0;bottom:0}
+.win{position:absolute;border:1px solid var(--b05);border-radius:6px;background:var(--bg);overflow:hidden;cursor:pointer;transition:all .12s ease-out}
+.win.on{border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+.win .tt{padding:8px 12px;color:var(--t35);font-size:11px;border-bottom:1px solid var(--b05)}
+.win pre{padding:10px 12px;color:var(--t50);font:11.5px/1.6 var(--font);white-space:pre-wrap}
+.win.on pre{color:var(--t70)}
+.win pre .p{color:var(--ok)}
+.win .badge{position:absolute;top:7px;right:10px;color:var(--t20);font-size:10px}
+.blank{position:absolute;inset:40% 0 auto;text-align:center;color:var(--t20)}
+.toast{position:fixed;left:50%;top:calc(var(--barh) + 14px);transform:translateX(-50%);padding:5px 12px;border-radius:6px;background:var(--raised);border:1px solid var(--b10);color:var(--t70);font-size:11px;opacity:0;transition:opacity .15s;z-index:25;pointer-events:none}
+.toast.show{opacity:1}
+
+/* sim controls (not part of the design) */
+.sim{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;padding:7px 12px;border-radius:8px;
+  border:1px dashed var(--b10);background:var(--surface);color:var(--t35);font-size:11px;z-index:40;white-space:nowrap}
+.sim b{color:var(--t70);font-weight:400}
+.chip{padding:1px 6px;border:1px solid var(--b10);border-radius:4px;cursor:pointer;color:var(--t50)}
+.chip.on{color:var(--bg);background:var(--t90)}
+#themes .chip.on{outline:1px solid var(--fg);outline-offset:1px}
+.sim .perf{color:var(--ok)}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="l"><span style="color:var(--t70)"></span><div class="ws" id="ws"></div></div>
+  <div class="c" id="clock"></div>
+  <div class="r">
+    <span class="agents">󰚩 <b>2</b></span>
+    <span class="ico">󰂯</span><span class="ico">󰖩</span><span class="ico">󰕾</span><span class="ico">󰍹</span><span class="ico">󰁹</span>
+    <div class="kh" id="kh" title="Hold ❖ for hints · click to browse">
+      <i>❖</i><i class="m" data-m="shift">⇧</i><i class="m" data-m="ctrl">⌃</i><i class="m" data-m="alt">⌥</i>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="panel"></div>
+<div class="desk" id="desk"></div>
+<div class="toast" id="toast"></div>
+
+<div class="cfg" id="cfg">
+  <div class="card">
+    <div class="top"><b>super-hints.jsonc</b><span>~/.config/omarchy/super-hints.jsonc</span><span class="sp"></span><button class="btn" id="cfgEditor">Open in editor</button></div>
+    <textarea id="cfgText" spellcheck="false"></textarea>
+    <div class="bot"><span class="st" id="cfgSt"></span><button class="btn" id="cfgReset">Restore defaults</button><button class="btn" id="cfgDone">Done</button></div>
+  </div>
+</div>
+
+<div class="sim">
+  <span>hold <b>`</b> or <b>CapsLock</b> = ❖ · click ❖ in the bar to browse</span>
+  <span>mods
+    <span class="chip" data-sm="super">❖</span><span class="chip" data-sm="shift">⇧</span><span class="chip" data-sm="ctrl">⌃</span><span class="chip" data-sm="alt">⌥</span>
+  </span>
+  <span>theme <span id="themes"></span></span>
+  <button class="btn" id="reset">reset stats</button>
+  <span>rank+paint <span class="perf" id="perf">–</span></span>
+</div>
+
+<script>
+"use strict";
+const $ = id=>document.getElementById(id);
+
+/* ───────────── config ───────────── */
+const DEFAULT_CFG = `// Super Hints  ·  ~/.config/omarchy/super-hints.jsonc
+// Changes apply as soon as you save.
+{
+  // How long to hold ❖ before hints appear (ms). Quick combos never trigger it.
+  "delay": 160,
+
+  // How many suggestions to show while holding ❖
+  "rows": 10,
+
+  // Show a short explanation under each shortcut: "all" | "top" | "off"
+  "descriptions": "all",
+
+  // Group suggestions under headings like Arrange, Workspaces, Apps
+  "groupByCategory": true,
+
+  // What decides the order (any numbers, they're balanced against each other)
+  "weights": {
+    "frequency": 0.4,   // what you use the most
+    "context": 0.4,     // what fits the app you're in
+    "sequence": 0.2     // what usually comes next
+  },
+
+  // Shortcuts you press quickly, before hints appear, count as learned
+  // and make room for ones you haven't picked up yet.
+  "learned": {
+    "enabled": true,
+    "fastMs": 350,      // pressed faster than this = you knew it
+    "strength": 0.6,    // 0 = ignore, 1 = push learned shortcuts to the bottom
+    "hide": false       // true = drop fully learned shortcuts entirely
+  },
+
+  // Heading order. Leave one out to hide it.
+  "categories": ["move", "arrange", "window", "tabs", "workspaces", "apps", "menus", "system"],
+
+  // Always show / never show (hover a row in the pinned panel to see its id)
+  "pin": [],
+  "exclude": [],
+
+  // Rename anything in your own words
+  "labels": {
+    // "split": { "label": "Rotate split", "desc": "Side-by-side ⇄ stacked" }
+  },
+
+  // Nudge suggestions per app (window class from hyprctl).
+  // +0.3 = more likely, -1 = never in that app
+  "apps": {
+    "com.mitchellh.ghostty": { "split": 0.2, "tmux": 0.2 },
+    "zen": { "pass": 0.2 }
+  }
+}
+`;
+function stripJsonc(t){
+  let o="",i=0,s=false;
+  while(i<t.length){
+    const c=t[i];
+    if(s){ o+=c; if(c==="\\"){o+=t[i+1]||"";i+=2;continue} if(c==='"') s=false; i++; continue; }
+    if(c==='"'){ s=true; o+=c; i++; continue; }
+    if(c==="/"&&t[i+1]==="/"){ while(i<t.length&&t[i]!=="\n") i++; continue; }
+    if(c==="/"&&t[i+1]==="*"){ const j=t.indexOf("*/",i+2); i=j<0?t.length:j+2; continue; }
+    o+=c; i++;
+  }
+  return o.replace(/,(\s*[}\]])/g,"$1");
+}
+const LS="super-hints-mockup-v1";
+function lsGet(k){ try{return localStorage.getItem(k)}catch{return null} }
+function lsSet(k,v){ try{localStorage.setItem(k,v)}catch{} }
+let cfgText = lsGet(LS+"-cfg") || DEFAULT_CFG;
+let CFG = JSON.parse(stripJsonc(DEFAULT_CFG));
+const W = {freq:.4, ctx:.4, seq:.2};
+function applyCfg(text){
+  const c = JSON.parse(stripJsonc(text));
+  const d = JSON.parse(stripJsonc(DEFAULT_CFG));
+  CFG = {...d, ...c, weights:{...d.weights,...c.weights}, learned:{...d.learned,...c.learned}};
+  const w=CFG.weights, sum=(+w.frequency||0)+(+w.context||0)+(+w.sequence||0)||1;
+  W.freq=w.frequency/sum; W.ctx=w.context/sum; W.seq=w.sequence/sum;
+  panel.classList.toggle("d-top",CFG.descriptions==="top");
+  panel.classList.toggle("d-off",CFG.descriptions==="off");
+}
+
+/* ───────────── bindings (mirrors your live hyprctl binds) ───────────── */
+const ARW=["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"], LR=["ArrowLeft","ArrowRight"];
+const DIG=[1,2,3,4,5,6,7,8,9].map(n=>"Digit"+n), DIG5=DIG.slice(0,5);
+const CATS = {move:"Move & focus", arrange:"Arrange", window:"Window", tabs:"Tabs", workspaces:"Workspaces", apps:"Apps", menus:"Menus", system:"System"};
+// [id, mods, keys, codes, label, description, category, seed uses, seed learned]
+const B = [
+  // move & focus
+  ["focus",   "super",           ["←→↑↓"],ARW,               "Jump to window",            "Focus the window on that side",                    "move", 522, .85],
+  ["swap",    "super shift",     ["←→↑↓"],ARW,               "Move window",               "Swap places with the window on that side",         "move", 109, .3],
+  ["drag",    "super",           ["drag"],[],                "Drag window",               "Hold ❖ and drag with the mouse to move it",        "move", 140, .6],
+  ["tabjump", "super ctrl",      ["←→"],  LR,                "Jump between tabs",         "Focus the tab on that side of a stack",            "move", 8,   0],
+  // arrange
+  ["split",   "super",           ["J"],   ["KeyJ"],          "Flip side-by-side / stacked","Two windows next to each other, or one above the other","arrange", 88, .2],
+  ["layout",  "super",           ["L"],   ["KeyL"],          "Change layout",             "Switch how windows are arranged on this workspace","arrange", 17, 0],
+  ["resize",  "super",           ["−","="],["Minus","Equal"],"Resize width",              "Make the window narrower or wider",                "arrange", 38, .1],
+  ["resizeV", "super shift",     ["−","="],["Minus","Equal"],"Resize height",             "Make the window shorter or taller",                "arrange", 14, 0],
+  ["resizeS", "super alt",       ["−","="],["Minus","Equal"],"Resize a little",           "Fine-tune the size in small steps",                "arrange", 9,  0],
+  ["resizeL", "super ctrl",      ["−","="],["Minus","Equal"],"Resize a lot",              "Change the size in big jumps",                     "arrange", 7,  0],
+  ["rdrag",   "super",           ["right-drag"],[],          "Resize with mouse",         "Hold ❖ and right-drag a window edge",              "arrange", 60, .4],
+  ["wfull",   "super alt",       ["F"],   ["KeyF"],          "Stretch to full width",     "Window spans the screen side to side",             "arrange", 26, 0],
+  ["pseudo",  "super",           ["P"],   ["KeyP"],          "Keep window's own size",    "Stays in the grid but keeps its preferred size",   "arrange", 6,  0],
+  ["savew",   "super alt",       ["Home"],["Home"],          "Remember this width",       "Save the window's width to restore later",         "arrange", 4,  0],
+  ["restw",   "super",           ["Home"],["Home"],          "Restore saved width",       "Go back to the width you saved",                   "arrange", 5,  0],
+  ["gaps",    "super shift",     ["⌫"],   ["Backspace"],     "Show / hide gaps",          "Space between windows on or off",                  "arrange", 8,  0],
+  ["square",  "super ctrl",      ["⌫"],   ["Backspace"],     "Square single window",      "A lone window keeps a square shape instead of stretching","arrange", 3, 0],
+  // window
+  ["close",   "super",           ["W"],   ["KeyW"],          "Close window",              "Close the window you're in",                       "window", 381, .85],
+  ["full",    "super",           ["F"],   ["KeyF"],          "Full screen",               "Fill the whole screen, press again to go back",    "window", 148, .5],
+  ["tfull",   "super ctrl",      ["F"],   ["KeyF"],          "Maximize",                  "Take up the whole workspace, keep the top bar",    "window", 19,  0],
+  ["float",   "super",           ["T"],   ["KeyT"],          "Float window",              "Free it from the grid so you can drag it around",  "window", 71,  .2],
+  ["pop",     "super",           ["O"],   ["KeyO"],          "Pop out & keep on top",     "Small floating window that stays visible",         "window", 31,  0],
+  ["opacity", "super",           ["⌫"],   ["Backspace"],     "See-through window",        "Turn transparency on or off",                      "window", 12,  0],
+  // tabs
+  ["group",   "super",           ["G"],   ["KeyG"],          "Stack as tabs",             "Combine windows into one tabbed window",           "tabs", 14, 0],
+  ["intotab", "super alt",       ["←→↑↓"],ARW,               "Add to tab stack",          "Merge this window into the stack on that side",    "tabs", 5,  0],
+  ["ungroup", "super alt",       ["G"],   ["KeyG"],          "Take out of tabs",          "Pull this window out of its stack",                "tabs", 6,  0],
+  ["tabnext", "super alt",       ["⇥"],   ["Tab"],           "Next tab",                  "Cycle through the tabs in a stack",                "tabs", 11, 0],
+  ["tabprev", "super shift alt", ["⇥"],   ["Tab"],           "Previous tab",              "Cycle backwards through the tabs",                 "tabs", 4,  0],
+  ["tabn",    "super alt",       ["1‥5"], DIG5,              "Go to tab number",          "Jump straight to a tab in the stack",              "tabs", 3,  0],
+  // workspaces
+  ["ws",      "super",           ["1‥9"], DIG,               "Go to workspace",           "Switch to another desktop",                        "workspaces", 903, .9],
+  ["mvws",    "super shift",     ["1‥9"], DIG,               "Send window & follow",      "Move this window to a desktop and go there",       "workspaces", 158, .4],
+  ["mvsil",   "super shift alt", ["1‥9"], DIG,               "Send window, stay here",    "Move this window to a desktop without leaving",    "workspaces", 33,  0],
+  ["nextws",  "super",           ["⇥"],   ["Tab"],           "Next workspace",            "Cycle forward through desktops",                   "workspaces", 61,  .2],
+  ["prevws",  "super shift",     ["⇥"],   ["Tab"],           "Previous workspace",        "Cycle backward through desktops",                  "workspaces", 27,  0],
+  ["former",  "super ctrl",      ["⇥"],   ["Tab"],           "Back to last workspace",    "Jump to the desktop you were just on",             "workspaces", 44,  0],
+  ["scratch", "super",           ["S"],   ["KeyS"],          "Show hidden window",        "Bring back the window you tucked away",            "workspaces", 47,  .2],
+  ["toscr",   "super alt",       ["S"],   ["KeyS"],          "Tuck window away",          "Hide it for later, ❖ S brings it back",            "workspaces", 19,  0],
+  ["mvmon",   "super shift alt", ["←→↑↓"],ARW,               "Move desktop to other screen","Send this whole workspace to another monitor",   "workspaces", 11,  0],
+  // apps
+  ["term",    "super",           ["↵"],   ["Enter"],         "New terminal",              "Open another terminal window",                     "apps", 412, .9],
+  ["browser", "super shift",     ["B"],   ["KeyB"],          "Open browser",              "New browser window",                               "apps", 184, .6],
+  ["editor",  "super shift",     ["N"],   ["KeyN"],          "Open code editor",          "Launch your editor",                               "apps", 96,  .3],
+  ["notes",   "super shift",     ["O"],   ["KeyO"],          "Open Obsidian",             "Your notes",                                       "apps", 58,  .2],
+  ["files",   "super shift",     ["F"],   ["KeyF"],          "Open file manager",         "Browse your files",                                "apps", 41,  0],
+  ["pass",    "super shift",     ["/"],   ["Slash"],         "Open password manager",     "Look up or fill a password",                       "apps", 52,  .1],
+  ["music",   "super shift",     ["M"],   ["KeyM"],          "Open music",                "Play or control music",                            "apps", 29,  0],
+  ["signal",  "super shift",     ["G"],   ["KeyG"],          "Open Signal",               "Messages",                                         "apps", 24,  0],
+  ["email",   "super shift",     ["E"],   ["KeyE"],          "Open email",                "Your inbox",                                       "apps", 18,  0],
+  ["chatgpt", "super shift",     ["A"],   ["KeyA"],          "Open ChatGPT",              "AI chat in a web app",                             "apps", 15,  0],
+  ["docker",  "super shift",     ["D"],   ["KeyD"],          "Open Docker",               "Manage containers",                                "apps", 12,  0],
+  ["tmux",    "super alt",       ["↵"],   ["Enter"],         "New tmux terminal",         "Terminal that keeps sessions alive",               "apps", 22,  0],
+  // menus
+  ["launch",  "super",           ["␣"],   ["Space"],         "Omarchy menu",              "Apps, settings and system, all in one place",      "menus", 296, .8],
+  ["apps",    "super alt",       ["␣"],   ["Space"],         "Find an app",               "Search and launch any app",                        "menus", 64,  0],
+  ["keys",    "super",           ["K"],   ["KeyK"],          "Show all shortcuts",        "Full list of key combos",                          "menus", 15,  0],
+  ["sysmenu", "super",           ["Esc"], ["Escape"],        "Power options",             "Lock, log out, restart or shut down",              "menus", 21,  0],
+  ["themes",  "super ctrl shift",["␣"],   ["Space"],         "Change theme",              "Switch the look of your desktop",                  "menus", 9,   0],
+  ["bg",      "super ctrl",      ["␣"],   ["Space"],         "Change wallpaper",          "Pick the next background",                         "menus", 13,  0],
+  // system
+  ["notif",   "super",           [","],   ["Comma"],         "Clear notification",        "Dismiss the latest notification",                  "system", 83, .3],
+  ["notifall","super shift",     [","],   ["Comma"],         "Clear all notifications",   "Dismiss every notification",                       "system", 21, 0],
+  ["dnd",     "super ctrl",      [","],   ["Comma"],         "Do not disturb",            "Silence notifications on or off",                  "system", 14, 0],
+  ["bar",     "super shift",     ["␣"],   ["Space"],         "Show / hide top bar",       "More room for your windows",                       "system", 10, 0],
+  ["clip",    "super ctrl",      ["V"],   ["KeyV"],          "Clipboard history",         "Paste something you copied earlier",               "system", 72, .1],
+  ["emoji",   "super ctrl",      ["E"],   ["KeyE"],          "Emoji picker",              "Find and insert an emoji",                         "system", 36, 0],
+  ["capture", "super ctrl",      ["C"],   ["KeyC"],          "Screenshot or record",      "Capture your screen",                              "system", 43, 0],
+  ["lock",    "super ctrl",      ["L"],   ["KeyL"],          "Lock screen",               "Lock now, password to get back in",                "system", 31, .2],
+  ["audio",   "super ctrl",      ["A"],   ["KeyA"],          "Sound settings",            "Speakers, headphones and microphone",              "system", 16, 0],
+  ["bt",      "super ctrl",      ["B"],   ["KeyB"],          "Bluetooth",                 "Connect headphones and devices",                   "system", 9,  0],
+  ["display", "super ctrl",      ["D"],   ["KeyD"],          "Display settings",          "Screens, resolution and scaling",                  "system", 7,  0],
+  ["scaleup", "super",           ["/"],   ["Slash"],         "Make everything bigger",    "Increase screen scaling",                          "system", 5,  0],
+  ["scaledn", "super alt",       ["/"],   ["Slash"],         "Make everything smaller",   "Decrease screen scaling",                          "system", 4,  0],
+  ["idle",    "super ctrl",      ["I"],   ["KeyI"],          "Stay awake",                "Stop the screen from locking on its own",          "system", 5,  0],
+  ["calc",    "super ctrl",      ["Q"],   ["KeyQ"],          "Calculator",                "Quick maths",                                      "system", 11, 0],
+  ["night",   "super ctrl",      ["N"],   ["KeyN"],          "Night light",               "Warmer colours, easier on the eyes",               "system", 10, 0],
+].map(([id,mods,keys,codes,label,desc,cat,seed,learn])=>({id,mods:new Set(mods.split(" ")),mkey:mods,keys,codes,label,desc,cat,seed,learn,mouse:!codes.length}));
+
+/* ───────────── context model ───────────── */
+// How relevant each category is in each context, then per-shortcut overrides.
+const CAT_FIT = {
+  term:   {move:.75, arrange:.65, window:.5,  tabs:.3,  workspaces:.6, apps:.45, menus:.3, system:.2},
+  browser:{move:.6,  arrange:.45, window:.6,  tabs:.35, workspaces:.6, apps:.45, menus:.3, system:.4},
+  editor: {move:.7,  arrange:.65, window:.5,  tabs:.3,  workspaces:.55,apps:.5,  menus:.3, system:.3},
+  notes:  {move:.5,  arrange:.45, window:.55, tabs:.3,  workspaces:.5, apps:.45, menus:.3, system:.5},
+  empty:  {apps:.8,  menus:.7, workspaces:.6, system:.3},
+};
+const ID_FIT = {
+  "term.shell": {term:.85, tmux:.6, scratch:.5, toscr:.4, browser:.5, launch:.5},
+  "term.nvim":  {term:.9, full:.9, tfull:.5, editor:.05, clip:.4, close:.3},
+  "term.claude":{notif:.85, notifall:.5, dnd:.45, browser:.7, editor:.65, mvsil:.55, toscr:.45, clip:.55},
+  "browser":    {full:.85, pass:.9, clip:.75, capture:.7, mvws:.75, term:.7, float:.35, pop:.4},
+  "editor":     {term:.95, full:.7, browser:.6, clip:.55},
+  "notes":      {capture:.85, emoji:.7, clip:.8, browser:.6, float:.55, pop:.5},
+  "empty":      {term:1, browser:.9, launch:.9, editor:.7, ws:.7, former:.55},
+};
+// Only makes sense with another window on the workspace
+const NEEDS_PEERS = new Set(["focus","swap","split","layout","resize","resizeV","resizeS","resizeL","rdrag","group","intotab","tabjump","square"]);
+function affinityRaw(b,ck){ const base=ck.startsWith("term.")?"term":ck; return ID_FIT[ck]?.[b.id] ?? CAT_FIT[base]?.[b.cat] ?? .15; }
+function affinity(b, ck, n){
+  if(n===0 && (["move","arrange","window","tabs"].includes(b.cat) || ["mvws","mvsil","toscr"].includes(b.id))) return -1;
+  let a = affinityRaw(b,ck);
+  if(n===1 && NEEDS_PEERS.has(b.id)) a *= .1;
+  if(n>=3 && (b.cat==="move"||b.cat==="arrange")) a = Math.min(1, a+.15); // busy workspace → arranging matters more
+  const nudge = CFG.apps?.[curWin()?.wmclass]?.[b.id];
+  if(nudge!==undefined){ if(nudge<=-1) return -1; a = Math.max(0, Math.min(1, a+nudge)); }
+  return a;
+}
+// What tends to follow what (short-lived boost after an action)
+const SEQ = {
+  apps:{focus:.9,swap:.75,split:.6,mvws:.65,resize:.45,float:.3},
+  close:{focus:.7,ws:.6,term:.4},
+  ws:{term:.6,launch:.5,browser:.4},
+  mvws:{ws:.85,focus:.4},
+  full:{full:.9},
+  focus:{focus:.6,swap:.55,close:.45,full:.4,split:.35},
+  swap:{swap:.7,focus:.6,resize:.5,split:.4},
+  split:{resize:.7,swap:.6,split:.5},
+  resize:{resize:.8,resizeV:.5,swap:.3},
+  group:{tabnext:.8,intotab:.7,tabjump:.6},
+  intotab:{tabnext:.7,intotab:.6},
+  float:{pop:.5,rdrag:.5,drag:.6},
+};
+const SEQ_TTL = 9000;
+
+/* ───────────── state ───────────── */
+const CTXS=["term.shell","term.nvim","term.claude","browser","editor","notes","empty"];
+let stats = (()=>{ try{return JSON.parse(lsGet(LS))}catch{return null} })() || seedStats();
+function seedStats(){
+  const s={global:{},ctx:{},learned:{}};
+  for(const b of B){ s.global[b.id]=b.seed; s.learned[b.id]=b.learn; }
+  for(const c of CTXS){ s.ctx[c]={}; for(const b of B) s.ctx[c][b.id]=Math.round(b.seed*affinityRaw(b,c)*.6); }
+  return s;
+}
+function saveStats(){ lsSet(LS, JSON.stringify(stats)); }
+let last = null; // {id, cat, t}
+
+const CLASSES = {
+  ghostty:{app:"ghostty",icon:"",wmclass:"com.mitchellh.ghostty"},
+  zen:{app:"zen",icon:"󰈹",wmclass:"zen"},
+  code:{app:"code",icon:"󰨞",wmclass:"code"},
+  obsidian:{app:"obsidian",icon:"󱓧",wmclass:"obsidian"},
+};
+let wid=0;
+const mkWin=(cls,ctx,title,body)=>({id:++wid,cls,ctx,title,body,full:false,wmclass:CLASSES[cls].wmclass});
+const TERM = {
+  "term.shell":["zsh — ~/projects/acme", `<span class="p">❯</span> git status\nOn branch main\nYour branch is up to date with 'origin/main'.\n\n<span class="p">❯</span> ▍`],
+  "term.nvim":["nvim — apps/web/globals.css", `  1 :root {\n  2   --surface: oklch(0.05 0 0);\n  3   --text-90: rgb(248 248 248 / .9);\n  4 }\n~\n~\n<span class="p">NORMAL</span>  globals.css  utf-8  4:1`],
+  "term.claude":["claude — ~/projects/acme", `<span class="p">✻</span> Refactoring auth middleware…\n  ⎿ Edited src/middleware.ts (+24 −11)\n  ⎿ Running tests…\n\n<span class="p">></span> ▍`],
+};
+const termWin=(c="term.shell")=>mkWin("ghostty",c,...TERM[c]);
+const spaces = {
+  1:[mkWin("code","editor","code — acme/apps/web", `export function middleware(req) {\n  const session = await auth(req)\n  if (!session) return redirect('/login')\n}`)],
+  2:[termWin("term.claude"), termWin("term.nvim"), mkWin("zen","browser","zen — localhost:3000", `Acme · Dashboard\n\n  ▸ Agents      2 running\n  ▸ Sessions    14 today`)],
+  3:[mkWin("obsidian","notes","obsidian — Daily/2026-10-07", `# Wed 7 Oct\n\n- [ ] review pull requests\n- [x] ship release notes`)],
+  4:[], 5:[],
+};
+let curWs=2; const focusIdx={1:0,2:0,3:0,4:0,5:0};
+const curWin=()=>spaces[curWs][focusIdx[curWs]]||null;
+const ctxKey=()=>curWin()?.ctx||"empty";
+
+/* ───────────── ranking ───────────── */
+const held={super:false,shift:false,ctrl:false,alt:false};
+const heldList=()=>["super","shift","ctrl","alt"].filter(m=>held[m]);
+let pinned=false;
+
+function rank(limit){
+  const hk=heldList(), ck=ctxKey(), n=spaces[curWs].length;
+  const g=stats.global, cx=stats.ctx[ck]||{}, L=CFG.learned;
+  let maxG=1,maxC=1; for(const b of B){ if(g[b.id]>maxG) maxG=g[b.id]; if((cx[b.id]||0)>maxC) maxC=cx[b.id]; }
+  const lg=Math.log1p(maxG), lc=Math.log1p(maxC);
+  const now=performance.now(), seqTbl=last&&now-last.t<SEQ_TTL?(SEQ[last.cat]||{}):null, fade=seqTbl?1-(now-last.t)/SEQ_TTL:0;
+  const cats=CFG.categories, excl=new Set(CFG.exclude), pin=new Set(CFG.pin);
+  const out=[];
+  for(const b of B){
+    if(excl.has(b.id) || !cats.includes(b.cat)) continue;
+    let ok=true; for(const m of hk) if(!b.mods.has(m)){ok=false;break;} if(!ok) continue;
+    const exact=b.mods.size===hk.length;
+    const a=affinity(b,ck,n); if(a<0) continue;
+    const learned = L.enabled ? (stats.learned[b.id]||0) : 0;
+    if(L.hide && learned>.8 && !pin.has(b.id)) continue;
+    const f=.5*Math.log1p(g[b.id]||0)/lg + .5*Math.log1p(cx[b.id]||0)/lc;
+    const s=seqTbl?((seqTbl[b.id]??0)*fade):0;
+    const p={freq:W.freq*f, ctx:W.ctx*a, seq:W.seq*s};
+    let score=(p.freq+p.ctx+p.seq) * (1 - L.strength*learned);
+    if(!exact) score*=.5;
+    if(pin.has(b.id)) score+=10;
+    const why = learned>.6 ? "known" : p.seq>.05&&p.seq>=p.ctx*.6 ? "seq" : p.ctx>p.freq ? "ctx" : "freq";
+    out.push({b,score,why});
+  }
+  out.sort((x,y)=>y.score-x.score);
+  return out.slice(0,limit);
+}
+
+/* ───────────── render ───────────── */
+const panel=$("panel"), kh=$("kh");
+const G={super:"❖",shift:"⇧",ctrl:"⌃",alt:"⌥"};
+const CTX_LABEL={"term.shell":"terminal","term.nvim":"nvim","term.claude":"claude","browser":"browsing","editor":"coding","notes":"writing","empty":"empty workspace"};
+const lab=b=>CFG.labels?.[b.id]?.label||b.label, dsc=b=>CFG.labels?.[b.id]?.desc||b.desc;
+
+function render(fireId){
+  const t0=performance.now();
+  const hk=heldList(), w=curWin(), ck=ctxKey(), n=spaces[curWs].length;
+  const list=rank(pinned && hk.length<=1 ? Infinity : CFG.rows);
+  const app = w ? `${CLASSES[w.cls].icon}  ${CLASSES[w.cls].app} · ${CTX_LABEL[ck]}` : CTX_LABEL.empty;
+  let h=`<div class="hd"><span class="app">${app}</span><span>ws ${curWs} · ${n} window${n===1?"":"s"}</span><span class="cog" id="cog" title="Settings"></span></div>`;
+  if(!list.length) h+=`<div class="empty">No shortcuts use ${hk.map(m=>G[m]).join(" ")}</div>`;
+  const topId=list[0]?.b.id;
+  const rowHtml=r=>{
+    const b=r.b, extra=[...b.mods].filter(m=>!held[m]).map(m=>`<span class="k extra">${G[m]}</span>`).join("");
+    const keys=b.keys.map(k=>`<span class="k${b.mouse?" mouse":""}">${k}</span>`).join("");
+    const why = r.why==="known"?"learned" : r.why==="seq"?"usually next" : r.why==="ctx"?`good for ${CTX_LABEL[ck]}` : `used ${stats.global[b.id]}×`;
+    return `<div class="row${b.id===topId?" top":""}${r.why==="known"?" known":""}${fireId===b.id?" fire":""}" title="${b.id}"><span class="keys">${extra}${keys}</span><span class="txt"><span class="lbl">${lab(b)}</span><span class="desc">${dsc(b)}</span></span><span class="why ${r.why}">${why}</span></div>`;
+  };
+  if(CFG.groupByCategory){
+    const groups=new Map(); // insertion order = best-scoring group first
+    for(const r of list){ if(!groups.has(r.b.cat)) groups.set(r.b.cat,[]); groups.get(r.b.cat).push(r); }
+    // browsing (pinned): configured heading order; live hints: most relevant group first
+    const order = pinned ? CFG.categories.filter(c=>groups.has(c)) : [...groups.keys()];
+    for(const c of order) h+=`<div class="cat">${CATS[c]}</div>`+groups.get(c).map(rowHtml).join("");
+  } else h+=list.map(rowHtml).join("");
+  const next=["shift","ctrl","alt"].filter(m=>!held[m]).map(m=>{
+    const want=new Set([...hk,"super",m]); const c=B.some(b=>b.mods.size===want.size&&[...want].every(x=>b.mods.has(x)));
+    return c?`<span>+<b>${G[m]}</b> ${({shift:"apps & moving",ctrl:"settings",alt:"fine control"})[m]}</span>`:"";
+  }).join("");
+  if(next) h+=`<div class="foot">${next}</div>`;
+  panel.innerHTML=h;
+  $("perf").textContent=(performance.now()-t0).toFixed(2)+"ms";
+}
+
+/* show / hide */
+let showT=null, shown=false, inputAt=0;
+function modsChanged(){
+  for(const el of kh.querySelectorAll(".m")) el.classList.toggle("on",held[el.dataset.m]);
+  for(const el of document.querySelectorAll("[data-sm]")) el.classList.toggle("on",held[el.dataset.sm]);
+  if(pinned){ render(); return; }
+  if(held.super){
+    if(shown){ render(); return; }
+    if(!showT) showT=setTimeout(()=>{ showT=null; if(!held.super) return; shown=true; render(); panel.classList.add("show"); kh.classList.add("live"); }, CFG.delay);
+  } else hide();
+}
+function hide(){ clearTimeout(showT); showT=null; shown=false; pinned=false; panel.classList.remove("show","pinned"); kh.classList.remove("live"); }
+function pin(){ pinned=true; shown=true; render(); panel.classList.add("show","pinned"); kh.classList.add("live"); }
+kh.addEventListener("click",()=> pinned ? hide() : pin());
+panel.addEventListener("click",e=>{ if(e.target.closest("#cog")) openCfg(); });
+document.addEventListener("mousedown",e=>{ if(pinned && !e.target.closest(".panel,.kh,.cfg,.sim")) hide(); });
+
+/* ───────────── execute (mock window manager) ───────────── */
+function trigger(code){
+  const hk=heldList().join(" ");
+  const b=B.find(b=>b.mkey===hk && b.codes.includes(code));
+  if(!b) return;
+  const ck=ctxKey(), now=performance.now();
+  // Fluency: fired before the hints would have appeared → you knew it
+  const fast = !pinned && (now-inputAt) < Math.max(CFG.learned.fastMs, CFG.delay);
+  stats.learned[b.id] = (stats.learned[b.id]||0)*.8 + (fast?.2:0);
+  stats.global[b.id]=(stats.global[b.id]||0)+1;
+  (stats.ctx[ck] ||= {})[b.id]=(stats.ctx[ck][b.id]||0)+1;
+  saveStats();
+  last={id:b.id, cat:b.cat==="apps"?"apps":b.id, t:now};
+  inputAt=now;
+  act(b,code);
+  drawDesk();
+  if(shown) render(b.id); else { clearTimeout(showT); showT=null; }
+  if(fast) toast(`${lab(b)}  ·  ${Math.round(stats.learned[b.id]*100)}% learned`);
+}
+function act(b,code){
+  const sp=spaces[curWs], fi=focusIdx[curWs], w=sp[fi], digit=code.startsWith("Digit")?+code.slice(5):null;
+  const dir=(code==="ArrowLeft"||code==="ArrowUp")?-1:1;
+  const spawn=win=>{ sp.push(win); focusIdx[curWs]=sp.length-1; };
+  switch(b.id){
+    case "term": case "tmux": spawn(termWin()); break;
+    case "browser": spawn(mkWin("zen","browser","zen — new tab","  ⌕  Search or enter address")); break;
+    case "editor": spawn(mkWin("code","editor","code — untitled","// ▍")); break;
+    case "notes": spawn(mkWin("obsidian","notes","obsidian — Untitled","# ▍")); break;
+    case "close": if(w){ sp.splice(fi,1); focusIdx[curWs]=Math.max(0,Math.min(fi,sp.length-1)); } break;
+    case "full": case "tfull": if(w) w.full=!w.full; break;
+    case "focus": if(sp.length>1) focusIdx[curWs]=(fi+dir+sp.length)%sp.length; break;
+    case "swap": if(sp.length>1){ const j=(fi+dir+sp.length)%sp.length; [sp[fi],sp[j]]=[sp[j],sp[fi]]; focusIdx[curWs]=j; } break;
+    case "ws": if(spaces[digit]) curWs=digit; else toast(`workspace ${digit}`); break;
+    case "mvws": case "mvsil": if(w&&spaces[digit]&&digit!==curWs){ sp.splice(fi,1); focusIdx[curWs]=Math.max(0,Math.min(fi,sp.length-1)); spaces[digit].push(w); if(b.id==="mvws"){ curWs=digit; focusIdx[digit]=spaces[digit].length-1; } } break;
+    case "nextws": curWs=curWs%5+1; break;
+    case "prevws": curWs=(curWs+3)%5+1; break;
+    case "former": curWs=curWs===2?1:2; break;
+    default: toast(lab(b));
+  }
+}
+let toastT; function toast(s){ const t=$("toast"); t.textContent="→ "+s; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1100); }
+
+/* ───────────── desktop ───────────── */
+function drawDesk(){
+  const d=$("desk"), sp=spaces[curWs], R=d.getBoundingClientRect(), g=8, Wd=R.width-16, H=R.height-16, n=sp.length;
+  let rects=[];
+  if(n===1) rects=[[0,0,Wd,H]];
+  else if(n>=2){ const mw=Wd/2-g/2, sh=(H-g*(n-2))/(n-1); rects=[[0,0,mw,H]]; for(let i=1;i<n;i++) rects.push([Wd/2+g/2,(i-1)*(sh+g),mw,sh]); }
+  const fw=curWin();
+  d.innerHTML = n ? sp.map((w,i)=>{
+    const [x,y,ww,hh]=w.full?[0,0,Wd,H]:rects[i], on=w===fw;
+    return `<div class="win${on?" on":""}" data-i="${i}" style="left:${x+8}px;top:${y+8}px;width:${ww}px;height:${hh}px;z-index:${w.full?5:on?2:1}"><div class="tt">${CLASSES[w.cls].icon}  ${w.title}</div><span class="badge">${w.full?"fullscreen":""}</span><pre>${w.body}</pre></div>`;
+  }).join("") : `<div class="blank">workspace ${curWs} · empty</div>`;
+  $("ws").innerHTML=[1,2,3,4,5].map(i=>`<span data-ws="${i}" class="${i===curWs?"on":spaces[i].length?"occ":""}">${i}</span>`).join("");
+}
+$("desk").addEventListener("mousedown",e=>{ const w=e.target.closest(".win"); if(!w) return; focusIdx[curWs]=+w.dataset.i; drawDesk(); if(shown) render(); });
+$("ws").addEventListener("mousedown",e=>{ const s=e.target.closest("[data-ws]"); if(!s) return; curWs=+s.dataset.ws; drawDesk(); if(shown) render(); });
+addEventListener("resize",drawDesk);
+
+/* ───────────── input ───────────── */
+const SUPER=new Set(["Backquote","CapsLock","MetaLeft","MetaRight","OSLeft","OSRight"]);
+const MODS={ShiftLeft:"shift",ShiftRight:"shift",ControlLeft:"ctrl",ControlRight:"ctrl",AltLeft:"alt",AltRight:"alt"};
+const typing=e=>e.target.tagName==="TEXTAREA";
+addEventListener("keydown",e=>{
+  if(typing(e)){ if(e.key==="Escape") closeCfg(); return; }
+  if(e.key==="Escape" && pinned && !held.super){ hide(); return; }
+  if(SUPER.has(e.code)){ e.preventDefault(); if(!held.super){ held.super=true; inputAt=performance.now(); modsChanged(); } return; }
+  if(MODS[e.code]){ e.preventDefault(); const m=MODS[e.code]; if(!held[m]){ held[m]=true; inputAt=performance.now(); modsChanged(); } return; }
+  if(held.super){ e.preventDefault(); if(!e.repeat||e.code.startsWith("Arrow")||e.code==="Minus"||e.code==="Equal") trigger(e.code); }
+});
+addEventListener("keyup",e=>{
+  if(typing(e)) return;
+  if(SUPER.has(e.code)){ held.super=false; modsChanged(); return; }
+  if(MODS[e.code]){ held[MODS[e.code]]=false; modsChanged(); }
+});
+addEventListener("blur",()=>{ for(const k in held) held[k]=false; if(!pinned) modsChanged(); });
+for(const el of document.querySelectorAll("[data-sm]")) el.addEventListener("mousedown",e=>{ e.preventDefault(); const m=el.dataset.sm; held[m]=!held[m]; inputAt=performance.now(); modsChanged(); });
+
+/* ───────────── config editor ───────────── */
+const cfgEl=$("cfg"), ta=$("cfgText"), st=$("cfgSt");
+function openCfg(){ ta.value=cfgText; status(true); cfgEl.classList.add("show"); ta.focus(); }
+function closeCfg(){ cfgEl.classList.remove("show"); }
+function status(ok,msg){ st.className="st "+(ok?"ok":"err"); st.textContent=ok?"✓ applied":msg; }
+let cfgT;
+ta.addEventListener("input",()=>{ clearTimeout(cfgT); cfgT=setTimeout(()=>{
+  try{ applyCfg(ta.value); cfgText=ta.value; lsSet(LS+"-cfg",cfgText); status(true); if(shown) render(); }
+  catch(err){ status(false,"⚠ "+err.message); }
+},150); });
+ta.addEventListener("keydown",e=>{ if(e.key==="Tab"){ e.preventDefault(); ta.setRangeText("  ",ta.selectionStart,ta.selectionEnd,"end"); ta.dispatchEvent(new Event("input")); } });
+$("cfgDone").addEventListener("click",closeCfg);
+$("cfgReset").addEventListener("click",()=>{ ta.value=DEFAULT_CFG; ta.dispatchEvent(new Event("input")); });
+$("cfgEditor").addEventListener("click",()=>toast("omarchy launch editor ~/.config/omarchy/super-hints.jsonc"));
+cfgEl.addEventListener("mousedown",e=>{ if(e.target===cfgEl) closeCfg(); });
+
+/* ───────────── themes (foundational tokens from /usr/share/omarchy/themes/<name>/colors.toml) ───────────── */
+const THEMES={
+  "matte-black":{fg:"#dfdfdf",bg:"#000000",accent:"#f8f8f8",muted:"#575757",ok:"#66cb8e"},
+  "tokyo-night":{fg:"#a9b1d6",bg:"#1a1b26",accent:"#7aa2f7",muted:"#414868",ok:"#9ece6a"},
+  catppuccin:{fg:"#cdd6f4",bg:"#1e1e2e",accent:"#89b4fa",muted:"#585b70",ok:"#a6e3a1"},
+  gruvbox:{fg:"#d4be98",bg:"#282828",accent:"#7daea3",muted:"#665c54",ok:"#a9b665"},
+  everforest:{fg:"#d3c6aa",bg:"#2d353b",accent:"#7fbbb3",muted:"#475258",ok:"#a7c080"},
+  nord:{fg:"#d8dee9",bg:"#2e3440",accent:"#81a1c1",muted:"#4c566a",ok:"#a3be8c"},
+  kanagawa:{fg:"#dcd7ba",bg:"#1f1f28",accent:"#dcd7ba",muted:"#54546D",ok:"#76946a"},
+  "rose-pine":{fg:"#575279",bg:"#faf4ed",accent:"#56949f",muted:"#cecacd",ok:"#286983"},
+  "flexoki-light":{fg:"#100F0F",bg:"#FFFCF0",accent:"#205EA6",muted:"#B7B5AC",ok:"#879A39"},
+};
+function setTheme(n){ const t=THEMES[n], r=document.documentElement.style; for(const k in t) r.setProperty("--"+k,t[k]);
+  for(const el of document.querySelectorAll("[data-th]")) el.classList.toggle("on",el.dataset.th===n); lsSet(LS+"-theme",n); }
+$("themes").innerHTML=Object.keys(THEMES).map(n=>`<span class="chip" data-th="${n}" title="${n}" style="display:inline-block;width:12px;height:12px;padding:0;margin-left:4px;vertical-align:-2px;background:${THEMES[n].bg};border-color:${THEMES[n].accent}"></span>`).join("");
+$("themes").addEventListener("mousedown",e=>{ const c=e.target.closest("[data-th]"); if(c) setTheme(c.dataset.th); });
+setTheme(THEMES[lsGet(LS+"-theme")]?lsGet(LS+"-theme"):"matte-black");
+
+$("reset").addEventListener("click",()=>{ stats=seedStats(); saveStats(); last=null; if(shown) render(); toast("stats reset"); });
+
+/* boot */
+try{ applyCfg(cfgText); }catch{ cfgText=DEFAULT_CFG; applyCfg(cfgText); }
+function tick(){ const d=new Date(); $("clock").textContent=d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}).replace(",","")+"  "+d.toTimeString().slice(0,5); }
+tick(); setInterval(tick,15000);
+drawDesk();
+</script>
+</body>
+</html>

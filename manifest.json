@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.glacierhubab.super-hints",
+  "name": "Super Hints",
+  "version": "0.1.0",
+  "author": "Martin Granström",
+  "license": "MIT",
+  "description": "Hold Super to see the shortcuts you're most likely to need right now, ranked by what you use, the app you're in, and what usually comes next.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Super Hints",
+    "description": "Context-aware keybinding hints. Hold Super, or click to browse every shortcut.",
+    "category": "Compositor",
+    "aliases": ["super-hints", "shortcuts", "keybindings", "cheatsheet"],
+    "defaultSection": "right",
+    "allowMultiple": false
+  }
+}
